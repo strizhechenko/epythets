@@ -18,8 +18,8 @@ cd epythets
 # Инициализируем схему БД
 python3.8 -m epythets.__init__ --db db.sqlite3 --init
 # "Обучаем" на классике, чтобы типовые обороты не считались спецификой последующих текстов
+# На самом деле одного "Идиота" для этого мало - ~2.8к фраз.
 python3.8 -m epythets.__init__ --db db.sqlite3 --filename texts/idiot.txt --label idiot
-# На самом деле одного "Идиота" для этого мало.
 # из "случая Чарльза Декстера Уальда" извлеклось 2.5к фраз при значительно меньшей длине
 python3.8 -m epythets.__init__ --db db.sqlite3 --filename texts/wild.txt --label wild
 # А из Хребтов Безумия - 1.5к.
