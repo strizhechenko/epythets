@@ -53,13 +53,16 @@ def main():
         init(cur)
     if not args.filename:
         exit(0)
-    p = Path(args.filename)
+    p, count = Path(args.filename), 0
     assert p.is_file()
     with p.open() as fd:
-        for count, line in enumerate(fd):
-            process(args.label, line, cur)
-            if count % 50 == 0:
-                logging.info("Processed %d lines...", count)
+        try:
+            for count, line in enumerate(fd):
+                process(args.label, line, cur)
+                if count % 50 == 0:
+                    logging.info("Processed %d lines...", count)
+        except UnicodeDecodeError:
+            logging.exception("Can't read the fill till the end, line is %d", count)
     conn.commit()
     conn.close()
 
