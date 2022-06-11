@@ -25,6 +25,8 @@ def morph(parsed: list, grammems: set, forms: set) -> str or None:
         2. При выборе подходящей по всем параметрам лексемы.
     :return: либо _идеальное_ слово с большой буквы, либо ничего.
     """
+    if 'NOUN' in forms and any('ADJF' in word.tag for word in parsed):
+        return
     for word in parsed:
         if all(form in word.tag for form in forms) and word.score > 0.1:  # < 0.1 - высосано из пальца.
             for lexeme in word.lexeme:
