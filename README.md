@@ -12,17 +12,17 @@
 git clone https://github.com/strizhechenko/epythets
 cd epythets
 # Инициализируем схему БД
-python3.8 -m epythets.__init__ --db megadb.sqlite3 --init
+python3.8 -m epythets.__init__ --db db.sqlite3 --init
 # "Обучаем" на классике, чтобы типовые обороты не считались спецификой последующих текстов
-python3.8 -m epythets.__init__ --db megadb.sqlite3 --filename texts/dostoevsky/idiot.txt --label idiot
+python3.8 -m epythets.__init__ --db db.sqlite3 --filename texts/idiot.txt --label idiot
 # На самом деле одного "Идиота" для этого мало.
 # из "случая Чарльза Декстера Уальда" извлеклось 2.5к фраз при значительно меньшей длине
-python3.8 -m epythets.__init__ --db megadb.sqlite3 --filename texts/lovecraft/wild.txt --label wild
+python3.8 -m epythets.__init__ --db db.sqlite3 --filename texts/wild.txt --label wild
 # А из Хребтов Безумия - 1.5к.
-python3.8 -m epythets.__init__ --db megadb.sqlite3 --filename texts/lovecraft/madness.txt --label madness
+python3.8 -m epythets.__init__ --db db.sqlite3 --filename texts/madness.txt --label madness
 # Из "Снов в ведьмином доме" получилось достать 662 фразы, но ~40% являются довольно неспецифичными
-python3.8 -m epythets.__init__ --db megadb.sqlite3 --filename texts/lovecraft/witchhouse.txt --label witchhouse
-sqlite3 megadb.sqlite3
+python3.8 -m epythets.__init__ --db db.sqlite3 --filename texts/witchhouse.txt --label witchhouse
+sqlite3 db.sqlite3
 ```
 
 ``` sql
