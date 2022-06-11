@@ -28,14 +28,13 @@ python3.8 -m epythets.__init__ --db db.sqlite3 --filename texts/madness.txt --la
 python3.8 -m epythets.__init__ --db db.sqlite3 --filename texts/witchhouse.txt --label witchhouse
 sqlite3 db.sqlite3
 ```
+## Пример
+
+Что извлекли из Снов в Ведьмином доме? В принципе уровень специфичности около 60%. Мне кажется, если увеличить объём первичной базы, выйдет значительно лучше.
 
 ``` sql
 SELECT phrase FROM phrase WHERE label = 'witchhouse';
 ```
-
-## Пример
-
-Что извлекли из Снов в Ведьмином доме? В принципе уровень специфичности около 60%. Мне кажется, если увеличить объём первичной базы, выйдет значительно лучше.
 
 - Современная Работа
 - Замкнутое Пространство
