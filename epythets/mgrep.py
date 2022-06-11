@@ -7,9 +7,11 @@ from pymorphy2 import MorphAnalyzer
 morpher = MorphAnalyzer()
 IGNORE_WORDS = {
     'весь', 'всё', 'её', 'каждый', 'какой', 'такой', 'который', 'мой', 'он', 'они', 'твой', 'то', 'тот',
-    'это', 'этот', 'сам', 'свой', 'свои', 'своя', 'свое'
+    'это', 'этот', 'сам', 'свой', 'другой', 'иной', 'наш', 'любой', 'один', 'всякий', 'многие', 'некоторый', 'чей',
+    'самый', 'сей'
 }
 IGNORE_PHRASES = [['доброе', 'утро']]
+# TODO: IGNORE_TAGS = {'Anum'}
 
 
 def morph(parsed: list, grammems: set, forms: set) -> str or None:
