@@ -19,6 +19,8 @@ def parse_args():
     parser.add_argument('--db', type=str, help='БД для сохранения фразочек', default='epythets.sqlite')
     parser.add_argument('--label', type=str, help='Пометка источника для добавляемых фраз')
     parser.add_argument('--init', action='store_true', help="Создать БД")
+    parser.add_argument('--stat', action='store_true', help="Статистика по меткам в БД")
+    parser.add_argument('--dump', action='store_true', help="Извлечь данные из БД")
     parser.add_argument('--debug', action='store_true', default=False, help="Включить отладочное логирование.")
     parser.add_argument('--silent', action='store_true', default=False, help="Оставить только warning/error логи.")
     args = parser.parse_args()
@@ -32,16 +34,16 @@ def parse_args():
         logging.warning("As the DB is not exists yet, initializing it")
         args.init = True
     if args.filename:
-        print(args.filename)
         if args.label is None:
-            print("Hack: setting label from filename", file=sys.stderr)
+            logging.warning("Hack: setting label from filename")
             p = Path(args.filename)
             args.label = p.name.split('.')[0]
     elif args.label:
-        print("Hack: reading from stdin", file=sys.stderr)
-        args.filename = '/dev/stdin'
-    elif not args.init:
-        raise AssertionError("You should define --filename, --label or --init")
+        if not args.dump:
+            logging.warning("Hack: reading from stdin, press CTRL-D to skip")
+            args.filename = '/dev/stdin'
+    elif not args.init and not args.stat:
+        raise AssertionError("You should define --filename, --label, --stat or --init")
     return args
 
 
@@ -66,18 +68,26 @@ def main():
     cur = conn.cursor()
     if args.init:
         init(cur)
-    if not args.filename:
-        exit(0)
-    p, count = Path(args.filename), 0
-    assert p.is_file() or p.is_char_device()
-    with p.open() as fd:
-        try:
-            for count, line in enumerate(fd):
-                process(args.label, line, cur)
-                if count % 50 == 0:
-                    logging.info("Processed %d lines...", count)
-        except UnicodeDecodeError:
-            logging.exception("Can't read the fill till the end, line is %d", count)
+    if args.stat:
+        logging.info("Database stats:")
+        for label, count in cur.execute(f"SELECT label, COUNT(DISTINCT phrase) FROM phrase GROUP BY label").fetchall():
+            logging.info('Label %s: %d phrases', label, count)
+        return
+    if args.filename:
+        p, count = Path(args.filename), 0
+        if p.is_file() or p.is_char_device():
+            with p.open() as fd:
+                try:
+                    for count, line in enumerate(fd):
+                        process(args.label, line, cur)
+                        if count % 50 == 0:
+                            logging.info("PROGRESS: Processed %d lines...", count)
+                except UnicodeDecodeError:
+                    logging.exception("Can't read the fill till the end, line is %d", count)
+    if args.dump:
+        for phrase in cur.execute(f"SELECT phrase FROM phrase WHERE label = '{args.label}' ORDER BY phrase").fetchall():
+            print(phrase[0])
+        return
     conn.commit()
     conn.close()
     logging.info("DONE!")

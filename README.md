@@ -61,16 +61,10 @@ epythets --filename texts/witchhouse.txt
 
 ### Просмотр результатов
 
-Подключаемся к базе данных
+Копаемся себе в извлечённых фразах:
 
 ``` shell
-sqlite3 epythets.sqlite
-```
-
-И копаемся себе в извлечённых фразах:
-
-``` sql
-SELECT phrase FROM phrase WHERE label = 'witchhouse';
+epythets --label=witchhouse --dump
 ```
 
 - Современная Работа
@@ -87,8 +81,8 @@ SELECT phrase FROM phrase WHERE label = 'witchhouse';
 
 Как посмотреть статистику по файлам (сколько эпитетов из какого текста извлечено):
 
-``` sql
-SELECT label, COUNT(DISTINCT phrase) FROM phrase GROUP BY label;
+``` shell
+epythets --stat
 ```
 
 | label | count |
