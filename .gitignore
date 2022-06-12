@@ -2,3 +2,6 @@
 *.sqlite
 __pycache__
 texts/
+build/
+dist/
+*.egg-info/
