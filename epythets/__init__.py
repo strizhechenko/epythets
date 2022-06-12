@@ -5,6 +5,7 @@
 import argparse
 import logging
 import sqlite3
+import sys
 from pathlib import Path
 
 from epythets.mgrep import pick_combos
@@ -15,22 +16,38 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.description = "Вытянуть последние N записей из мастодон в свой SQLite для фразочек бота"
     parser.add_argument('--filename', type=str, help='Путь к текстовому файлу')
-    parser.add_argument('--db', required=True, type=str, help='БД для сохранения фразочек')
+    parser.add_argument('--db', type=str, help='БД для сохранения фразочек', default='epythets.sqlite')
     parser.add_argument('--label', type=str, help='Пометка источника для добавляемых фраз')
     parser.add_argument('--init', action='store_true', help="Создать БД")
     parser.add_argument('--debug', action='store_true', default=False, help="Включить отладочное логирование.")
     parser.add_argument('--silent', action='store_true', default=False, help="Оставить только warning/error логи.")
     args = parser.parse_args()
-    assert (args.filename is None and args.label is None) or all((args.filename, args.label))
+    # A little trick: setting logging up as soon as possible to be able to use it in argument validation
+    level = logging.DEBUG if args.debug else logging.WARNING if args.silent else logging.INFO
+    logging.basicConfig(level=level, format="[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
+    db = Path('.').absolute() / args.db
+    if args.db == 'epythets.sqlite':
+        logging.warning('Using DB in %s', db)
+    if not db.is_file():
+        logging.warning("As the DB is not exists yet, initializing it")
+        args.init = True
+    if args.filename:
+        print(args.filename)
+        if args.label is None:
+            print("Hack: setting label from filename", file=sys.stderr)
+            p = Path(args.filename)
+            args.label = p.name.split('.')[0]
+    elif args.label:
+        print("Hack: reading from stdin", file=sys.stderr)
+        args.filename = '/dev/stdin'
+    elif not args.init:
+        raise AssertionError("You should define --filename, --label or --init")
     return args
 
 
 def process(label, content, cur):
-    n = 0
     for n, combo in enumerate(pick_combos(content)):
         cur.execute(f"INSERT OR IGNORE INTO phrase (label, phrase) VALUES ('{label}', '{combo}')")
-    if n > 10:
-        logging.info("Processed line with %d phrases", n)
 
 
 def init(cur):
@@ -45,8 +62,6 @@ def init(cur):
 
 def main():
     args = parse_args()
-    logging.basicConfig(level=(logging.DEBUG if args.debug else logging.WARNING if args.silent else logging.INFO),
-                        format="[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
     conn = sqlite3.connect(args.db)
     cur = conn.cursor()
     if args.init:
@@ -54,7 +69,7 @@ def main():
     if not args.filename:
         exit(0)
     p, count = Path(args.filename), 0
-    assert p.is_file()
+    assert p.is_file() or p.is_char_device()
     with p.open() as fd:
         try:
             for count, line in enumerate(fd):
@@ -65,6 +80,7 @@ def main():
             logging.exception("Can't read the fill till the end, line is %d", count)
     conn.commit()
     conn.close()
+    logging.info("DONE!")
 
 
 if __name__ == '__main__':
