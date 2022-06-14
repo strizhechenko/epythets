@@ -5,3 +5,5 @@ texts/
 build/
 dist/
 *.egg-info/
+sources
+*.xml

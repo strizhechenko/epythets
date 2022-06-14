@@ -5,10 +5,12 @@
 import argparse
 import logging
 import sqlite3
-import sys
 from pathlib import Path
+from urllib.parse import urlparse
+from datetime import date
 
 from epythets.mgrep import pick_combos
+from epythets.rss import from_url
 
 
 def parse_args():
@@ -16,6 +18,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.description = "Вытянуть последние N записей из мастодон в свой SQLite для фразочек бота"
     parser.add_argument('--filename', type=str, help='Путь к текстовому файлу')
+    parser.add_argument('--url', type=str, help='Использовать вместо файла RSS-фид')
     parser.add_argument('--db', type=str, help='БД для сохранения фразочек', default='epythets.sqlite')
     parser.add_argument('--label', type=str, help='Пометка источника для добавляемых фраз')
     parser.add_argument('--init', action='store_true', help="Создать БД")
@@ -38,18 +41,35 @@ def parse_args():
             logging.warning("Hack: setting label from filename")
             p = Path(args.filename)
             args.label = p.name.split('.')[0]
+    elif args.url:
+        if args.label is None:
+            today = date.today().strftime("%Y_%m_%d")
+            domain = urlparse(args.url).netloc.replace('.', '_')
+            args.label = f'{domain}_{today}'
+            logging.warning("Hack: setting label %s from URL", args.label)
     elif args.label:
         if not args.dump:
             logging.warning("Hack: reading from stdin, press CTRL-D to skip")
             args.filename = '/dev/stdin'
-    elif not args.init and not args.stat:
-        raise AssertionError("You should define --filename, --label, --stat or --init")
+    elif not any([args.init, args.stat, args.dump]):
+        raise AssertionError("You should define --filename, --label, --stat, --dump or --init")
     return args
 
 
 def process(label, content, cur):
     for n, combo in enumerate(pick_combos(content)):
         cur.execute(f"INSERT OR IGNORE INTO phrase (label, phrase) VALUES ('{label}', '{combo}')")
+
+
+def process_source(label, cursor, iterator):
+    count = 0
+    try:
+        for count, line in enumerate(iterator):
+            process(label, line, cursor)
+            if count % 50 == 0:
+                logging.info("PROGRESS: Processed %d lines...", count)
+    except UnicodeDecodeError:
+        logging.exception("Can't read the fill till the end, line is %d", count)
 
 
 def init(cur):
@@ -70,22 +90,23 @@ def main():
         init(cur)
     if args.stat:
         logging.info("Database stats:")
-        for label, count in cur.execute(f"SELECT label, COUNT(DISTINCT phrase) FROM phrase GROUP BY label").fetchall():
+        for label, count in cur.execute(f"SELECT label, COUNT(DISTINCT phrase) FROM phrase GROUP BY label"):
             logging.info('Label %s: %d phrases', label, count)
         return
-    if args.filename:
-        p, count = Path(args.filename), 0
+    if args.url:
+        iterator = from_url(args.url)
+        process_source(args.label, cur, iterator)
+    elif args.filename:
+        p = Path(args.filename)
         if p.is_file() or p.is_char_device():
             with p.open() as fd:
-                try:
-                    for count, line in enumerate(fd):
-                        process(args.label, line, cur)
-                        if count % 50 == 0:
-                            logging.info("PROGRESS: Processed %d lines...", count)
-                except UnicodeDecodeError:
-                    logging.exception("Can't read the fill till the end, line is %d", count)
+                process_source(args.label, cur, fd)
     if args.dump:
-        for phrase in cur.execute(f"SELECT phrase FROM phrase WHERE label = '{args.label}' ORDER BY phrase").fetchall():
+        if not args.label:
+            for phrase in cur.execute(f"SELECT phrase FROM phrase ORDER BY phrase"):
+                print(phrase[0])
+            return
+        for phrase in cur.execute(f"SELECT phrase FROM phrase WHERE label = '{args.label}' ORDER BY phrase"):
             print(phrase[0])
         return
     conn.commit()
