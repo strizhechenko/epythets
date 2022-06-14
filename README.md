@@ -58,6 +58,19 @@ epythets --label 'madness' < texts/at_the_mountains_of_madness.txt
 ``` shell
 epythets --filename texts/witchhouse.txt
 ```
+#### Можно читать RSS-ленты, а не файлы
+
+Вместо `--filename` указывайте `--url` с адресом rss-фида. Параметр `--label` автоматически выставится в доменное имя ресурса плюс суффикс в виде сегодняшней даты. Могу порекомендовать поиграться со следующими ресурсами:
+
+```
+https://tass.ru/rss/v2.xml
+https://pritchi.ru/rss_latest
+https://habr.com/ru/rss/all/all/
+https://www.opennet.ru/opennews/opennews_all_utf.rss
+https://www.linux.org.ru/section-rss.jsp
+```
+
+Можно наблюдать, насколько изменчивы слова, которыми описываются новости на этих ресурсах.
 
 ### Просмотр результатов
 
