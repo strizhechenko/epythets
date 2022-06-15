@@ -102,13 +102,11 @@ def main():
             with p.open() as fd:
                 process_source(args.label, cur, fd)
     if args.dump:
-        if not args.label:
-            for phrase in cur.execute(f"SELECT phrase FROM phrase ORDER BY phrase"):
-                print(phrase[0])
-            return
-        for phrase in cur.execute(f"SELECT phrase FROM phrase WHERE label = '{args.label}' ORDER BY phrase"):
+        sql = f"SELECT phrase FROM phrase ORDER BY phrase"
+        if args.label:
+            sql = f"SELECT phrase FROM phrase WHERE label = '{args.label}' ORDER BY phrase"
+        for phrase in cur.execute(sql):
             print(phrase[0])
-        return
     conn.commit()
     conn.close()
     logging.info("DONE!")
