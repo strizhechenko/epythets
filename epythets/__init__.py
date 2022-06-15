@@ -91,7 +91,7 @@ def main():
     if args.stat:
         logging.info("Database stats:")
         for label, count in cur.execute(f"SELECT label, COUNT(DISTINCT phrase) FROM phrase GROUP BY label"):
-            logging.info('Label %s: %d phrases', label, count)
+            print(f'{label}: {count} phrases')
         return
     if args.url:
         iterator = from_url(args.url)
