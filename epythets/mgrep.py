@@ -56,8 +56,9 @@ def detect_adjf_tags(adjf):
     adjf_tags = {'ADJF'}
     if 'PRTF' in adjf[0].tag:
         adjf_tags = {'PRTF'}
-        if 'Adjx' in adjf[0].tag:
-            adjf_tags.add('Adjx')
+        for tag in 'Adjx', 'actv', 'pssv':
+            if tag in adjf[0].tag:
+                adjf_tags.add(tag)
     return adjf_tags
 
 

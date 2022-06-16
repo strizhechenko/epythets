@@ -12,7 +12,7 @@ def requests_get(url):
     return requests.get(url, headers={'User-Agent': user_agent})
 
 
-def extract_text(xml: str):
+def parse_rss(xml: str):
     tree = ElementTree.fromstring(xml)
     for channel in tree:
         for item in channel:
@@ -21,5 +21,30 @@ def extract_text(xml: str):
                     yield text.text
 
 
-def from_url(url: str):
-    return extract_text(requests_get(url).text)
+def parse_html(html: str):
+    """ Не очень-то и HTML2Text обязательно тащить. Потом в плагины вынесу. """
+    from html2text import HTML2Text
+    h = HTML2Text()
+    h.ignore_images = h.ignore_links = h.ignore_tables = True
+    return h.handle(html).splitlines()
+
+
+def from_url(url: str, rss=True):
+    return (parse_rss if rss else parse_html)(requests_get(url).text)
+
+
+def get_urls(rss_url: str):
+    xml = requests_get(rss_url).text
+    tree = ElementTree.fromstring(xml)
+    for channel in tree:
+        for item in channel:
+            if item.tag == 'item':
+                processed = False
+                for link in item.findall('link'):
+                    processed = True
+                    yield link.text
+                if processed:
+                    continue
+                for guid in item.findall('guid'):
+                    if guid.attrib.get('isPermaLink'):
+                        yield link.text
