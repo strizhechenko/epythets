@@ -53,17 +53,9 @@ def post_parse(args):
             url = urlparse(args.url or args.rss)
             domain = url.netloc.replace('.', '_')
             domain = domain.split(':')[0]  # отсекаем порт
-            if domain == 'habr_com' and args.url:  # Небольшой хак для статей с хабра
-                args.label = f'habr/{Path(url.path).name}'
-            else:
-                args.label = f'{domain}_{today}'
+            args.label = f'{domain}_{today}'
             logging.warning("Hack: setting label %s from URL/RSS", args.label)
     elif args.rss_dive:
-        for feed in 'pritchi.ru', 'bashorg.org':  # фиды, контент которых помещается в описание
-            if feed in args.rss_dive:
-                args.rss, args.rss_dive, args.label = args.rss_dive, None, None
-                _main(args)
-                return
         for url in get_urls(args.rss_dive):
             logging.info("Processing URL: %s", url)
             args.url, args.label = url, None
