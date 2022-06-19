@@ -22,15 +22,14 @@ def requests_get(url, cache=True) -> str:
     q = re.sub(r'[^A-Za-z0-9]', '', _url.query)
     if q:
         p /= q
-    if not p.exists():
-        if not p.parent.exists():
-            p.parent.mkdir(parents=True, exist_ok=True)
-        resp = _requests_get(url)
-        p.write_text(resp)
-        return resp  # чтобы не перечитывать файл сразу после прочтения
-    else:
+    if p.exists():
         logging.info("Cache hit for url %s %s", url, p)
-    return p.read_text()
+        return p.read_text()
+    if not p.parent.exists():
+        p.parent.mkdir(parents=True, exist_ok=True)
+    resp = _requests_get(url)
+    p.write_text(resp)
+    return resp
 
 
 def _requests_get(url):
@@ -42,9 +41,14 @@ def _requests_get(url):
 def parse_rss(xml: str):
     """ Генератор, возвращающий заголовки и описания из ленты RSS """
     tree = ElementTree.fromstring(xml)
-    for channel in tree:
-        for item in channel:
-            if item.tag == 'item':
+    atom = "http://www.w3.org/2005/Atom"
+    if atom in tree.tag:
+        for entry in tree.findall(atom + "entry"):
+            for text in entry.findall(atom + 'title') + entry.findall(atom + 'content'):
+                yield text.text
+    else:
+        for channel in tree:
+            for item in channel.findall('item'):
                 for text in item.findall('title') + item.findall('description'):
                     yield text.text
 
@@ -58,7 +62,7 @@ def parse_html(html: str) -> list:
 
 
 def from_url(url: str, rss=True):
-    return (parse_rss if rss else parse_html)(requests_get(url))
+    return (parse_rss if rss else parse_html)(requests_get(url, cache=not rss))
 
 
 def get_urls(rss_url: str):
@@ -75,4 +79,4 @@ def get_urls(rss_url: str):
                     continue
                 for guid in item.findall('guid'):
                     if guid.attrib.get('isPermaLink'):
-                        yield link.text
+                        yield link.text  # TODO: понять, актуально ли и не баг ли копипасты, вроде хабровский RSS
