@@ -41,7 +41,7 @@ def _requests_get(url):
 def parse_rss(xml: str):
     """ Генератор, возвращающий заголовки и описания из ленты RSS """
     tree = ElementTree.fromstring(xml)
-    atom = "http://www.w3.org/2005/Atom"
+    atom = "{http://www.w3.org/2005/Atom}"
     if atom in tree.tag:
         for entry in tree.findall(atom + "entry"):
             for text in entry.findall(atom + 'title') + entry.findall(atom + 'content'):

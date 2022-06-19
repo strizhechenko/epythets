@@ -94,7 +94,7 @@ def pick_combos(line: str):
         combo = (words[n - 1], word)
         if all(re.match('^[а-я]{2,}$', word) for word in combo) and combo not in IGNORE_PHRASES:
             if all(result := morphs(combo)):
-                yield " ".join(result)
+                yield result
 
 
 if __name__ == '__main__':
