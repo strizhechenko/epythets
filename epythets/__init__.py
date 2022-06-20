@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from epythets.libepythet import Epythet
-from epythets.rss import from_url, get_urls
+from epythets.parsers import BaseParser
 
 
 def parse_args():
@@ -19,6 +19,7 @@ def parse_args():
     parser.description = "Вытянуть последние N записей из мастодон в свой SQLite для фразочек бота"
     parser.add_argument('--filename', type=str, help='Путь к текстовому файлу')
     parser.add_argument('--url', type=str, help='Использовать вместо файла HTML со страницы')
+    parser.add_argument('--mastodon', type=str, help='Использовать вместо файла публичный API инстанса мастодон')
     parser.add_argument('--rss', type=str, help='Использовать вместо файла заголовки и описания из RSS-фида')
     parser.add_argument('--rss-dive', type=str, help='Использовать вместо файла содержимое всех статей из RSS-фида')
     parser.add_argument('--db', type=str, help='БД для сохранения фразочек', default='epythets.sqlite')
@@ -31,7 +32,7 @@ def parse_args():
     args = parser.parse_args()
     # A little trick: setting logging up as soon as possible to be able to use it in argument validation
     level = logging.DEBUG if args.debug else logging.WARNING if args.silent else logging.INFO
-    logging.basicConfig(level=level, format="[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
+    logging.basicConfig(level=level, format="[%(filename)s:%(lineno)s - %(funcName)20s() ] %(levelname)s %(message)s")
     return args
 
 
@@ -47,12 +48,17 @@ def post_parse(args: argparse.Namespace):
             p = Path(args.filename)
             args.tag = p.name.split('.')[0]
             logging.warning("Hack: setting tag from filename %s", args.tag)
-    elif args.url or args.rss:
+    elif args.url or args.rss or args.mastodon:
         if args.tag is None:
-            args.tag = urlparse(args.url or args.rss).netloc.split(':')[0]  # отсекаем порт
+            tag = urlparse(args.url or args.rss or args.mastodon)
+            args.tag = tag.path if not tag.netloc and tag.path else tag.netloc.split(':')[0] # отсекаем порт
+            if args.mastodon and args.mastodon == args.tag:
+                args.mastodon = f'https://{args.tag}/api/v1/timelines/public?local=true'
+                logging.warning("Hack: setting mastodon API endpoint from %s to %s", args.tag, args.mastodon)
             logging.warning("Hack: setting tag %s from URL/RSS", args.tag)
     elif args.rss_dive:
-        for url in get_urls(args.rss_dive):
+        p = BaseParser.from_args(args)
+        for url in p.parse():
             logging.info("Processing URL: %s", url)
             args.url, args.tag = url, None
             _main(args)
@@ -73,9 +79,10 @@ def _main(args):
         for tag, count in e.stat():
             print(tag, count)
         return
-    if args.url or args.rss:
+    if args.url or args.rss or args.mastodon:
         e.url = args.url or args.rss
-        iterator = from_url(args.url or args.rss, rss=(args.rss is not None))
+        parser = BaseParser.from_args(args)
+        iterator = parser.parse()
         e.process_source(iterator)
     elif args.filename:
         e.today = None  # Сохраняем дату только для обновляемых источников типа RSS

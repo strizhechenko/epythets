@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='epythets',
-    version='v0.1.0',
+    version='v0.1.1',
     python_requires='>=3.8.0',
     install_requires='pymorphy2',
     packages=['epythets'],
