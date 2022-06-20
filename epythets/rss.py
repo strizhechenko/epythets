@@ -40,7 +40,11 @@ def _requests_get(url):
 
 def parse_rss(xml: str):
     """ Генератор, возвращающий заголовки и описания из ленты RSS """
-    tree = ElementTree.fromstring(xml)
+    try:
+        tree = ElementTree.fromstring(xml)
+    except ElementTree.ParseError:
+        logging.exception("XML: %s", xml)
+        raise
     atom = "{http://www.w3.org/2005/Atom}"
     if atom in tree.tag:
         for entry in tree.findall(atom + "entry"):
@@ -67,7 +71,11 @@ def from_url(url: str, rss=True):
 
 def get_urls(rss_url: str):
     xml = requests_get(rss_url, cache=False)
-    tree = ElementTree.fromstring(xml)
+    try:
+        tree = ElementTree.fromstring(xml)
+    except ElementTree.ParseError:
+        logging.exception("XML: %s", xml)
+        raise
     for channel in tree:
         for item in channel:
             if item.tag == 'item':
