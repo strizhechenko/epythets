@@ -10,10 +10,10 @@ from epythets.http import requests_get
 class BaseParser:
     cache = True
 
-    def __init__(self, url: str or None):
+    def __init__(self, url: str or None, ignore_cache=True):
         """ Если не передать self.url, можно вручную выставить self.content """
         self.url = url
-        self.content = requests_get(self.url, self.cache) if self.url else None
+        self.content = requests_get(self.url, self.cache, ignore_cache) if self.url else None
 
     @abc.abstractmethod
     def parse(self) -> list:
@@ -22,19 +22,19 @@ class BaseParser:
     @staticmethod
     def from_args(args):
         if args.mastodon:
-            return MastodonParser(args.mastodon)
+            return MastodonParser(args.mastodon, args.ignore_cache)
         elif args.rss_dive:
-            return RSSDiveParser(args.rss_dive)
+            return RSSDiveParser(args.rss_dive, args.ignore_cache)
         elif args.rss:
-            return RSSParser(args.rss)
+            return RSSParser(args.rss, args.ignore_cache)
         else:
-            return HTMLParser(args.url)
+            return HTMLParser(args.url, args.ignore_cache)
 
 
 class HTMLParser(BaseParser):
-    def __init__(self, url):
+    def __init__(self, url, ignore_cache=True):
         """ Тоже хаки, чтобы не делать html2text обязательной зависимостью, но и не плодить объекты пачками """
-        super().__init__(url)
+        super().__init__(url, ignore_cache)
         from html2text import HTML2Text
         h = HTML2Text()
         h.ignore_images = h.ignore_links = h.ignore_tables = True

@@ -4,8 +4,16 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 
-def requests_get(url: str, cache=True) -> str:
-    return _cache_get(url) if cache else _requests_get(url)
+def requests_get(url: str, check_cache=True, ignore_cached=True) -> str:
+    """
+    :param url: URL для проверки
+    :param check_cache: вообще заглянуть если у нас что-то в кэше
+    :param ignore_cached: если в кэше что-то есть - игнорировать всю запись, но если нет - отправить запрос
+    :return:
+    """
+    if check_cache:
+        return _cache_get(url, ignore_cached)
+    return _requests_get(url)
 
 
 def _requests_get(url: str):
@@ -18,10 +26,18 @@ def _requests_get(url: str):
     return requests.get(url, headers={'User-Agent': user_agent}).text
 
 
-def _cache_get(url: str):
+def _cache_get(url: str, ignore_cached=True) -> str:
+    """
+    :param url: найти в кэше запись по этому URL
+    :param ignore_cached: если ничего не найдено - делать запрос и записать его результат, если найдено - падать.
+    :return: строка с контентом (пустая в случае игнора кэша)
+    """
     cache_file = _url_to_cache(url)
     if cache_file.exists():
         logging.info("Cache hit for url %s %s", url, cache_file)
+        if ignore_cached:
+            logging.warning("But ignore it because of --ignore-cache")
+            return ""
         return cache_file.read_text()
     if not cache_file.parent.exists():
         cache_file.parent.mkdir(parents=True, exist_ok=True)

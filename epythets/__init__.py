@@ -4,8 +4,6 @@
 
 import argparse
 import logging
-import sqlite3
-from datetime import date
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -27,6 +25,8 @@ def parse_args():
     parser.add_argument('--init', action='store_true', help="Создать БД")
     parser.add_argument('--stat', action='store_true', help="Статистика по меткам в БД")
     parser.add_argument('--dump', action='store_true', help="Извлечь данные из БД")
+    parser.add_argument('--re-read', action='store_false', dest='ignore_cache', default=True,
+                        help="Не читать кэшированные данные")
     parser.add_argument('--debug', action='store_true', default=False, help="Включить отладочное логирование.")
     parser.add_argument('--silent', action='store_true', default=False, help="Оставить только warning/error логи.")
     args = parser.parse_args()
@@ -58,6 +58,7 @@ def post_parse(args: argparse.Namespace):
             logging.warning("Hack: setting tag %s from URL/RSS", args.tag)
     elif args.rss_dive:
         p = BaseParser.from_args(args)
+        args.rss_dive = None
         for url in p.parse():
             logging.info("Processing URL: %s", url)
             args.url, args.tag = url, None
