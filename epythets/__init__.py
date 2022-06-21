@@ -50,9 +50,8 @@ def post_parse(args: argparse.Namespace):
             logging.warning("Hack: setting tag from filename %s", args.tag)
     elif args.url or args.rss or args.mastodon:
         if args.tag is None:
-            tag = urlparse(args.url or args.rss or args.mastodon)
-            args.tag = tag.path if not tag.netloc and tag.path else tag.netloc.split(':')[0] # отсекаем порт
-            if args.mastodon and args.mastodon == args.tag:
+            args.tag = urlparse(args.url or args.rss or args.mastodon).netloc.split(':')[0]  # отсекаем порт
+            if args.mastodon and 'api' not in args.mastodon:
                 args.mastodon = f'https://{args.tag}/api/v1/timelines/public?local=true'
                 logging.warning("Hack: setting mastodon API endpoint from %s to %s", args.tag, args.mastodon)
             logging.warning("Hack: setting tag %s from URL/RSS", args.tag)
