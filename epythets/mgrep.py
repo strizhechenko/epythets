@@ -8,7 +8,7 @@ morpher = MorphAnalyzer()
 IGNORE_WORDS = {
     'весь', 'всё', 'её', 'каждый', 'какой', 'такой', 'который', 'мой', 'он', 'они', 'твой', 'то', 'тот',
     'это', 'этот', 'сам', 'свой', 'другой', 'иной', 'наш', 'любой', 'один', 'всякий', 'многие', 'некоторый', 'чей',
-    'самый', 'сей', 'данный'
+    'самый', 'сей', 'данный', 'некий', 'ваш'
 }
 IGNORE_PHRASES = [['доброе', 'утро']]
 # TODO: IGNORE_TAGS = {'Anum'}
@@ -89,7 +89,7 @@ def pick_combos(line: str):
     :param line: просто строка текста. Хоть целую книгу можно сюда засунуть.
     :return: подходящие под заданный шаблон пары слов
     """
-    words = line.lower().split()
+    words = re.split(r'[ \t,.!?;-]', line.lower())
     for n, word in enumerate(words[1:], 1):
         combo = (words[n - 1], word)
         if all(re.match('^[а-я]{2,}$', word) for word in combo) and combo not in IGNORE_PHRASES:

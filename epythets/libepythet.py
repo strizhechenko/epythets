@@ -39,7 +39,7 @@ class Epythet:
         try:
             for count, line in enumerate(iterator):
                 self.process(line)
-                if count % 50 == 0:
+                if count != 0 and count % 50 == 0:
                     logging.info("PROGRESS: Processed %d lines...", count)
         except UnicodeDecodeError:
             logging.exception("Can't read the fill till the end, line is %d", count)
