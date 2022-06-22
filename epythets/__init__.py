@@ -82,7 +82,7 @@ def _main(args):
             print(tag, count)
         return
     if (args.url or args.rss or args.mastodon) and not args.filename:  # скармливание файла выставляет его имя в URL
-        e.url = strip_utm(args.url or args.rss, True)
+        e.url = strip_utm(args.url or args.rss)
         parser = BaseParser.from_args(args)
         iterator = parser.parse()
         e.process_source(iterator)

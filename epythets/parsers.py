@@ -1,10 +1,10 @@
-import logging
 import abc
 # etree не очень хорошая идея в плане потребления памяти, но RSS вроде не бывают гигантскими.
 import json
+import logging
 from xml.etree import ElementTree
 
-from epythets.http import requests_get
+from epythets.http import Cache
 
 
 class BaseParser:
@@ -12,8 +12,7 @@ class BaseParser:
 
     def __init__(self, url: str or None, ignore_cache=True):
         """ Если не передать self.url, можно вручную выставить self.content """
-        self.url = url
-        self.content = requests_get(self.url, self.cache, ignore_cache) if self.url else None
+        self.content = Cache().get(url, self.cache, ignore_cache) if url else None
 
     @abc.abstractmethod
     def parse(self) -> list:
@@ -47,6 +46,7 @@ class HTMLParser(BaseParser):
 
 class RSSParser(BaseParser):
     cache = False
+    atom = "{http://www.w3.org/2005/Atom}"
 
     def make_tree(self):
         try:
@@ -57,17 +57,22 @@ class RSSParser(BaseParser):
 
     def parse(self):
         """ Генератор, возвращающий заголовки и описания из ленты RSS """
-        atom = "{http://www.w3.org/2005/Atom}"
         tree = self.make_tree()
-        if atom in tree.tag:
-            for entry in tree.findall(atom + "entry"):
-                for text in entry.findall(atom + 'title') + entry.findall(atom + 'content'):
+        yield from self.parse_atom(tree) if self.atom in tree.tag else RSSParser.parse_rss(tree)
+
+    @staticmethod
+    def parse_rss(tree):
+        """ Обрабатываем классический RSS """
+        for channel in tree:
+            for item in channel.findall('item'):
+                for text in item.findall('title') + item.findall('description'):
                     yield text.text
-        else:
-            for channel in tree:
-                for item in channel.findall('item'):
-                    for text in item.findall('title') + item.findall('description'):
-                        yield text.text
+
+    def parse_atom(self, tree):
+        """ Обарабатываем Atom-feed"""
+        for entry in tree.findall(self.atom + "entry"):
+            for text in entry.findall(self.atom + 'title') + entry.findall(self.atom + 'content'):
+                yield text.text
 
 
 class RSSDiveParser(RSSParser):
@@ -77,15 +82,8 @@ class RSSDiveParser(RSSParser):
         for channel in tree:
             for item in channel:
                 if item.tag == 'item':
-                    processed = False
                     for link in item.findall('link'):
-                        processed = True
                         yield link.text
-                    if processed:
-                        continue
-                    for guid in item.findall('guid'):
-                        if guid.attrib.get('isPermaLink'):
-                            yield link.text  # TODO: понять, актуально ли и не баг ли копипасты, вроде хабровский RSS
 
 
 class MastodonParser(HTMLParser):
@@ -103,4 +101,3 @@ class MastodonParser(HTMLParser):
             for content in htmlparser.parse():
                 if text := content.replace("'", "").strip():
                     yield text
-
