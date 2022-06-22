@@ -1,7 +1,7 @@
 import logging
 import re
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs, urlencode
 
 
 def requests_get(url: str, check_cache=True, ignore_cached=True) -> str:
@@ -52,6 +52,10 @@ def _url_to_cache(url: str):
     cache_file = Path('texts') / _url.netloc.split(':')[0]  # отсекаем порт
     if _url.path and _url.path != '/':
         cache_file /= _url.path.lstrip('/')
-    if q := re.sub(r'[^A-Za-z0-9]', '', _url.query):
+    q = parse_qs(_url.query)
+    for key in list(q.keys()):  # Избавляемся от UTM-меток в URL
+        if key.startswith('utm_'):
+            del q[key]
+    if q := re.sub(r'[^A-Za-z0-9]', '', urlencode(q)):
         cache_file /= q
     return cache_file
