@@ -9,7 +9,7 @@ class TestMgrep(TestCase):
         logging.basicConfig(level=logging.INFO, format="[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
 
     def _check_it(self, line, expected):
-        self.assertEqual(expected, list(pick_combos(line)))
+        self.assertEqual(expected, list(" ".join(combo) for combo in pick_combos(line)))
 
     def test_it(self):
         self._check_it("своих старых", [])
