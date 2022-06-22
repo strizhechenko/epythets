@@ -41,13 +41,14 @@ def post_parse(args: argparse.Namespace):
     if args.db == 'epythets.sqlite':
         logging.warning('Using DB in %s', db)
     if not db.is_file():
-        logging.warning("As the DB is not exists yet, initializing it")
+        logging.warning("As the DB %s is not exists yet, initializing it", args.db)
         args.init = True
     if args.filename:
         if args.tag is None:
             p = Path(args.filename)
-            args.tag = p.name.split('.')[0]
-            logging.warning("Hack: setting tag from filename %s", args.tag)
+            args.url = p.name.split('.')[0]
+            args.tag = 'local_files'
+            logging.warning("Hack: setting tag %s / url %s from filename %s", args.tag, args.url, args.filename)
     elif args.url or args.rss or args.mastodon:
         if args.tag is None:
             args.tag = urlparse(args.url or args.rss or args.mastodon).netloc.split(':')[0]  # отсекаем порт
@@ -79,13 +80,13 @@ def _main(args):
         for tag, count in e.stat():
             print(tag, count)
         return
-    if args.url or args.rss or args.mastodon:
+    if (args.url or args.rss or args.mastodon) and not args.filename:  # скармливание файла выставляет его имя в URL
         e.url = args.url or args.rss
         parser = BaseParser.from_args(args)
         iterator = parser.parse()
         e.process_source(iterator)
     elif args.filename:
-        e.today = None  # Сохраняем дату только для обновляемых источников типа RSS
+        e.url = args.url
         e.process_file(args.filename)
     if args.dump:
         for phrase in e.dump():
