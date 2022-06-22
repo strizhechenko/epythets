@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 from epythets.libepythet import Epythet
 from epythets.parsers import BaseParser
+from epythets.http import strip_utm
 
 
 def parse_args():
@@ -81,7 +82,7 @@ def _main(args):
             print(tag, count)
         return
     if (args.url or args.rss or args.mastodon) and not args.filename:  # скармливание файла выставляет его имя в URL
-        e.url = args.url or args.rss
+        e.url = strip_utm(args.url or args.rss, True)
         parser = BaseParser.from_args(args)
         iterator = parser.parse()
         e.process_source(iterator)

@@ -1,7 +1,7 @@
 import logging
 import re
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs, urlencode
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode, ParseResult
 
 
 def requests_get(url: str, check_cache=True, ignore_cached=True) -> str:
@@ -46,16 +46,27 @@ def _cache_get(url: str, ignore_cached=True) -> str:
     return resp
 
 
+def strip_utm(url: str or ParseResult, rebuild=False) -> str or ParseResult:
+    if isinstance(url, str):
+        url = urlparse(url)
+    q = parse_qs(url.query)
+    for key in list(q.keys()):
+        if key.startswith('utm_'):
+            del q[key]
+    if not rebuild:
+        return urlencode(q)
+    _url = list(url)  # тупли неизменяемые
+    _url[4] = urlencode(q)  # 4 - индекс в query_string в tuple
+    return urlunparse(_url)
+
+
 def _url_to_cache(url: str):
-    """ TODO: отрезать UTM-метки"""
     _url = urlparse(url)
     cache_file = Path('texts') / _url.netloc.split(':')[0]  # отсекаем порт
     if _url.path and _url.path != '/':
         cache_file /= _url.path.lstrip('/')
-    q = parse_qs(_url.query)
-    for key in list(q.keys()):  # Избавляемся от UTM-меток в URL
-        if key.startswith('utm_'):
-            del q[key]
-    if q := re.sub(r'[^A-Za-z0-9]', '', urlencode(q)):
+    _query = strip_utm(_url)
+    logging.info(_query)
+    if q := re.sub(r'[^A-Za-z0-9]', '', _query):
         cache_file /= q
     return cache_file
