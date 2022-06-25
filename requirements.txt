@@ -1,3 +1,2 @@
-html2text
 requests
 pymorphy2

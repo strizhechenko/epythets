@@ -2,6 +2,7 @@ import abc
 # etree не очень хорошая идея в плане потребления памяти, но RSS вроде не бывают гигантскими.
 import json
 import logging
+import re
 from xml.etree import ElementTree
 
 from epythets.http import Cache
@@ -31,17 +32,19 @@ class BaseParser:
 
 
 class HTMLParser(BaseParser):
-    def __init__(self, url, ignore_cache=True):
-        """ Тоже хаки, чтобы не делать html2text обязательной зависимостью, но и не плодить объекты пачками """
-        super().__init__(url, ignore_cache)
-        from html2text import HTML2Text
-        h = HTML2Text()
-        h.ignore_images = h.ignore_links = h.ignore_tables = True
-        self.h = h
+    tags = re.compile(r"<[^>]*>")
+    non_cyrillic = re.compile(r'[A-Za-z0-9]+')
+    symbols = re.compile(r"[\"'.:,?{\}_\[/=\\()!@|;]")
+    spaces = re.compile(r"[ ]{2,}")
 
     def parse(self):
-        """ Не очень-то и HTML2Text обязательно тащить. Потом в плагины вынесу. """
-        return self.h.handle(self.content).splitlines()
+        """ Выполняется снизу вверх """
+        return self.spaces.sub(
+            ' ', self.symbols.sub(
+                ' ', self.non_cyrillic.sub(
+                    ' ', self.tags.sub(
+                        ' ', self.content)))
+        ).splitlines()
 
 
 class RSSParser(BaseParser):
