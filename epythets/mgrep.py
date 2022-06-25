@@ -1,17 +1,19 @@
 # coding: utf-8
 import logging
 import re
+from functools import lru_cache
 
 from pymorphy2 import MorphAnalyzer
 
 morpher = MorphAnalyzer()
 IGNORE_WORDS = {
-    'весь', 'всё', 'её', 'каждый', 'какой', 'такой', 'который', 'мой', 'он', 'они', 'твой', 'то', 'тот',
+    'весь', 'всё', 'её', 'каждый', 'какой', 'никакой', 'такой', 'который', 'мой', 'он', 'они', 'твой', 'то', 'тот',
     'это', 'этот', 'сам', 'свой', 'другой', 'иной', 'наш', 'любой', 'один', 'всякий', 'многие', 'некоторый', 'чей',
     'самый', 'сей', 'данный', 'некий', 'ваш', 'новый', 'разный'
 }
-IGNORE_PHRASES = [['доброе', 'утро']]
-# TODO: IGNORE_TAGS = {'Anum'}
+
+SEP = re.compile(r'[ \t\n,.!?;-]')
+LONGRU = re.compile('^[а-я]{3,}$')
 
 
 def morph(parsed: list, grammems: set, forms: set) -> str or None:
@@ -54,12 +56,17 @@ def add_common_tag(words: list, category: tuple, tags: set) -> bool or None:
 def detect_adjf_tags(adjf):
     """ Причастие (PRTF) должно сохранять свой изначальный залог (Adjx), иначе морфер может сильно исказить смысл """
     adjf_tags = {'ADJF'}
-    if 'PRTF' in adjf[0].tag:
+    if 'PRTF' in adjf:
         adjf_tags = {'PRTF'}
         for tag in 'Adjx', 'actv', 'pssv':
-            if tag in adjf[0].tag:
+            if tag in adjf:
                 adjf_tags.add(tag)
     return adjf_tags
+
+
+@lru_cache(200000)
+def cachemorph(word):
+    return morpher.parse(word)
 
 
 def morphs(words: tuple) -> tuple:
@@ -67,20 +74,22 @@ def morphs(words: tuple) -> tuple:
     :param words: входящая пара слов (2 строки)
     :return: исходящая пара слов (2 строки или None, None)
     """
-    parsed = list(map(morpher.parse, words))
+    if not all(LONGRU.match(word) for word in words):
+        return None, None
+    adjf, noun = map(cachemorph, words)
+    parsed = [adjf, noun]
     common_tags = {'nomn'}  # стараемся привести всё к именительному падежу
     # Обеспечиваем согласованность по числу, множественное в приоритете
     if not add_common_tag(parsed, ('plur', 'sing'), common_tags):
         return None, None  # нужно для работы all(result := )
     if 'sing' in common_tags:  # И, в случае единственного числа, по полу
         add_common_tag(parsed, ('masc', 'femn', 'neut'), common_tags)
-    logging.debug("common_tags %s", common_tags)
-    adjf, nomn = parsed
-    adjf_tags = detect_adjf_tags(adjf)
+    # logging.debug("common_tags %s", common_tags)
+    adjf_tags = detect_adjf_tags(adjf[0].tag)
     adjf = morph(adjf, common_tags, adjf_tags)
     if not adjf:  # ради того чтобы морфер не потел с существительным, если уже ясно что ничего не вышло
         return None, None
-    return adjf, morph(parsed[1], common_tags, {'NOUN'})
+    return adjf, morph(noun, common_tags, {'NOUN'})
 
 
 def pick_combos(line: str) -> tuple:
@@ -89,15 +98,16 @@ def pick_combos(line: str) -> tuple:
     :param line: просто строка текста. Хоть целую книгу можно сюда засунуть.
     :return: подходящие под заданный шаблон пары слов
     """
-    words = re.split(r'[ \t,.!?;-]', line.lower())
+    words = SEP.split(line.lower())
     for n, word in enumerate(words[1:], 1):
-        combo = (words[n - 1], word)
-        if all(re.match('^[а-я]{2,}$', word) for word in combo) and combo not in IGNORE_PHRASES:
-            if all(result := morphs(combo)):
-                yield result
+        if all(result := morphs((words[n - 1], word))):
+            yield result
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format="[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
-    for i in pick_combos("по крайней мере"):
-        print(i)
+    logging.basicConfig(level=logging.DEBUG,
+                        format="[%(asctime)s %(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
+    import sys
+    for _line in sys.stdin:
+        for i in pick_combos(_line):
+            logging.info("words %s %s", *i)
