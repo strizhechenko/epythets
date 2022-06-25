@@ -56,6 +56,9 @@ def post_parse(args: argparse.Namespace):
             if args.mastodon and 'api' not in args.mastodon:
                 args.mastodon = f'https://{args.tag}/api/v1/timelines/public?local=true'
                 logging.warning("Hack: setting mastodon API endpoint from %s to %s", args.tag, args.mastodon)
+            if args.tag.startswith('www'):
+                args.tag = args.tag[4:]
+                logging.warning("Remove www from tag: %s", args.tag)
             logging.warning("Hack: setting tag %s from URL/RSS", args.tag)
     elif args.rss_dive:
         p = BaseParser.from_args(args)
