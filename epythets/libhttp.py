@@ -60,14 +60,10 @@ class Cache:
         """
         import requests
         resp = requests.get(url, headers={'User-Agent': self.user_agent})
-        text = resp.text
         # Где-то в 5% случаев кириллица нормально не декодится, баг какой-то или хз
-        if not re.search(r'[А-Яа-я]+', text):
-            self_decoded = resp.content[:1000].decode('utf-8')
-            # Если удалось своими руками декодировать - радуемся
-            if re.search(r'[А-Яа-я]+', self_decoded):
-                return resp.content.decode('utf-8')
-        return text
+        if re.search(r'[А-Яа-я]+', resp.text):
+            return resp.text
+        return resp.content.decode('utf-8')  # другого выхода всё равно нет, можно не обрабатывать ошибки
 
 
 def strip_utm_from_query_string(query_string: str) -> str:
