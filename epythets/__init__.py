@@ -46,11 +46,12 @@ def post_parse(args: argparse.Namespace):
         logging.info("As the DB %s is not exists yet, initializing it", args.db)
         args.init = True
     if args.filename:
+        url, tag = Path(args.filename).name.split('.')[0], 'local_files'
         if args.tag is None:
-            path = Path(args.filename)
-            args.url = path.name.split('.')[0]
-            args.tag = 'local_files'
-            logging.debug("Hack: setting tag %s / url %s from filename %s", args.tag, args.url, args.filename)
+            args.tag = tag
+        if args.url is None:
+            args.url = url
+        logging.debug("Hack: setting tag %s / url %s from filename %s", args.tag, args.url, args.filename)
     elif args.url or args.rss or args.mastodon:
         if args.tag is None:
             args.tag = tag_from_url(args)
