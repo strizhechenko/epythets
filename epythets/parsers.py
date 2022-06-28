@@ -1,3 +1,4 @@
+""" Всевозможные парсеры и способы получения текста из разных источников """
 import abc
 # etree не очень хорошая идея в плане потребления памяти, но RSS вроде не бывают гигантскими.
 import json
@@ -5,7 +6,7 @@ import logging
 import re
 from xml.etree import ElementTree
 
-from epythets.http import Cache
+from epythets.libhttp import Cache
 
 
 class BaseParser:

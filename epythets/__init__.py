@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 
 from epythets.libepythet import Epythet
 from epythets.parsers import BaseParser
-from epythets.http import strip_utm
+from epythets.libhttp import strip_utm
 
 
 def parse_args():
@@ -38,71 +38,79 @@ def parse_args():
 
 
 def post_parse(args: argparse.Namespace):
-    db = Path('.').absolute() / args.db
+    """ Стараемся _вывести_ недостающие аргументы из имеющихся, дефолты, удобство и т.д. """
+    database = Path('.').absolute() / args.db
     if args.db == 'epythets.sqlite':
-        logging.warning('Using DB in %s', db)
-    if not db.is_file():
-        logging.warning("As the DB %s is not exists yet, initializing it", args.db)
+        logging.debug('Using DB in %s', database)
+    if not database.is_file():
+        logging.info("As the DB %s is not exists yet, initializing it", args.db)
         args.init = True
     if args.filename:
         if args.tag is None:
-            p = Path(args.filename)
-            args.url = p.name.split('.')[0]
+            path = Path(args.filename)
+            args.url = path.name.split('.')[0]
             args.tag = 'local_files'
-            logging.warning("Hack: setting tag %s / url %s from filename %s", args.tag, args.url, args.filename)
+            logging.debug("Hack: setting tag %s / url %s from filename %s", args.tag, args.url, args.filename)
     elif args.url or args.rss or args.mastodon:
         if args.tag is None:
-            args.tag = urlparse(args.url or args.rss or args.mastodon).netloc.split(':')[0]  # отсекаем порт
-            if args.mastodon and 'api' not in args.mastodon:
-                args.mastodon = f'https://{args.tag}/api/v1/timelines/public?local=true'
-                logging.warning("Hack: setting mastodon API endpoint from %s to %s", args.tag, args.mastodon)
-            if args.tag.startswith('www'):
-                args.tag = args.tag[4:]
-                logging.warning("Remove www from tag: %s", args.tag)
-            logging.warning("Hack: setting tag %s from URL/RSS", args.tag)
+            args.tag = tag_from_url(args)
     elif args.rss_dive:
-        p = BaseParser.from_args(args)
+        path = BaseParser.from_args(args)
         args.rss_dive = None
-        for url in p.parse():
+        for url in path.parse():
             logging.info("Processing URL: %s", url)
             args.url, args.tag = url, None
             _main(args)
     elif args.tag:
         if not args.dump:
-            logging.warning("Hack: reading from stdin, press CTRL-D to skip")
+            logging.info("Hack: reading from stdin, press CTRL-D to skip")
             args.filename = '/dev/stdin'
     elif not any([args.init, args.stat, args.dump]):
         raise AssertionError("You should define --filename, --tag, --stat, --dump or --init")
 
 
+def tag_from_url(args):
+    """ На основании одного из URL-флагов вычисляем недостающий тег для записей """
+    tag = urlparse(args.url or args.rss or args.mastodon).netloc.split(':')[0]  # отсекаем порт
+    if args.mastodon and 'api' not in args.mastodon:
+        args.mastodon = f'https://{tag}/api/v1/timelines/public?local=true'
+        logging.debug("Hack: setting mastodon API endpoint from %s to %s", tag, args.mastodon)
+    if tag.startswith('www'):
+        tag = tag[4:]
+    logging.debug("Hack: setting tag %s from URL/RSS", tag)
+    return tag
+
+
 def _main(args):
+    """ Основная логика прграммы, которая может быть использована в других программах с подставными аргументами """
     post_parse(args)
-    e = Epythet(args.db, args.tag)
+    epythet = Epythet(args.db, args.tag)
     if args.init:
-        e.init()
+        epythet.init()
     if args.stat:
-        for tag, count in e.stat():
+        for tag, count in epythet.stat():
             print(tag, count)
         return
     if (args.url or args.rss or args.mastodon) and not args.filename:  # скармливание файла выставляет его имя в URL
-        e.url = strip_utm(args.url or args.rss)
+        epythet.url = strip_utm(args.url or args.rss)
         parser = BaseParser.from_args(args)
         iterator = parser.parse()
-        e.process_source(iterator)
+        epythet.process_source(iterator)
     elif args.filename:
-        e.url = args.url
-        e.process_file(args.filename)
+        epythet.url = args.url
+        epythet.process_file(args.filename)
     if args.dump:
-        for phrase in e.dump():
+        for phrase in epythet.dump():
             print(*phrase)
-    e.conn.commit()
-    e.conn.close()
+    epythet.conn.commit()
+    epythet.conn.close()
 
 
 def main():
+    """ Основное поведение утилиты, парсит аргументы, а дальше всё стандартно """
     args = parse_args()
     _main(args)
-    logging.info("DONE!")
+    logging.debug("DONE!")
 
 
 if __name__ == '__main__':

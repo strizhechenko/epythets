@@ -1,3 +1,4 @@
+""" Прослойка между ядром и управляющей программой для записи эпитетов в базу данных для контроля уникальности """
 import logging
 import sqlite3
 from datetime import date
@@ -17,14 +18,14 @@ class Epythet:
 
     def process(self, content: str) -> None:
         assert self.tag
-        columns = ['tag', 'adjx', 'noun']
+        columns = ['tag', 'word1', 'word2', 'word3']
         if self.today:
             columns.append('added_at')
         if self.url:
             columns.append('url')
         for n, combo in enumerate(pick_combos(content)):
-            adjx, noun = combo
-            values = [self.tag, adjx, noun]
+            word1, word2, word3 = combo
+            values = [self.tag, word1, word2, word3]
             if self.today:
                 values.append(self.today)
             if self.url:
@@ -68,24 +69,28 @@ class Epythet:
         self.cur.execute("""CREATE TABLE IF NOT EXISTS "phrase"
             (
                 tag text not null,
-                adjx text not null,
-                noun text,
+                word1 text not null,
+                word2 text not null,
+                word3 text not null,
                 added_at text,
                 state int default 0 not null,
                 url      text,
                 constraint phrase_pk
-                    primary key (adjx, noun)
+                    primary key (word1, word2, word3)
             );""")
-        for column in 'added_at', 'tag', 'state', 'url':
+        for column in 'added_at', 'tag', 'state', 'url', 'word3':
             self.cur.execute(f"CREATE INDEX phrase_{column}_index on phrase ({column});")
-        self.cur.execute("CREATE UNIQUE INDEX phrase_uindex on phrase (adjx, noun);")
+        self.cur.execute("CREATE UNIQUE INDEX phrase_uindex on phrase (word1, word2, word3);")
 
     def stat(self):
         logging.info("Database stats:")
         return self.cur.execute(f"SELECT tag, COUNT(1) FROM phrase GROUP BY tag")
 
     def dump(self):
-        sql = f"SELECT adjx || ' ' || noun as p FROM phrase ORDER BY p"
-        if self.tag:
-            sql = f"SELECT adjx || ' ' || noun as p FROM phrase WHERE tag = '{self.tag}' ORDER BY p"
+        tag = f"tag = '{self.tag}' " if self.tag else ""
+        url = f"url = '{self.url}' " if self.url else ""
+        where = f"WHERE {' AND '.join([tag, url])}" if any([tag, url]) else ""
+        sql = f"""SELECT
+            word1 || ' ' || word2 || ' ' || word3 as p
+            FROM phrase {where} ORDER BY p"""
         return self.cur.execute(sql)

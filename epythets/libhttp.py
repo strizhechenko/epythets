@@ -1,3 +1,4 @@
+""" Модуль кэширования сетевых документов на диск с парой бонусов в виде подмены User-Agent для обхода защит от ботов"""
 import logging
 import re
 from pathlib import Path
@@ -20,9 +21,9 @@ class Cache:
         """
         cache_file = self._url2file(url)
         if cache_file.exists():
-            logging.info("Cache hit for url %s %s", url, cache_file)
+            logging.debug("Cache hit for url %s %s", url, cache_file)
             if ignore_cached:
-                logging.warning("But ignore it because of --ignore-cache")
+                logging.debug("But ignore it because of --ignore-cache")
                 return ""
             return cache_file.read_text()
         if not cache_file.parent.exists():
@@ -37,7 +38,6 @@ class Cache:
         if _url.path and _url.path != '/':
             cache_file /= _url.path.lstrip('/')
         _query = strip_utm_from_query_string(_url.query)
-        logging.info(_query)
         if q := re.sub(r'[^A-Za-z0-9]', '', _query):
             cache_file /= q
         return cache_file
