@@ -59,7 +59,15 @@ class Cache:
         Не хочу делать requests обязательной зависимостью, поэтому динамический ленивый импорт при использовании
         """
         import requests
-        return requests.get(url, headers={'User-Agent': self.user_agent}).text
+        resp = requests.get(url, headers={'User-Agent': self.user_agent})
+        text = resp.text
+        # Где-то в 5% случаев кириллица нормально не декодится, баг какой-то или хз
+        if not re.search(r'[А-Яа-я]+', text):
+            self_decoded = resp.content[:1000].decode('utf-8')
+            # Если удалось своими руками декодировать - радуемся
+            if re.search(r'[А-Яа-я]+', self_decoded):
+                return resp.content.decode('utf-8')
+        return text
 
 
 def strip_utm_from_query_string(query_string: str) -> str:

@@ -89,7 +89,7 @@ class Epythet:
     def dump(self):
         tag = f"tag = '{self.tag}' " if self.tag else ""
         url = f"url = '{self.url}' " if self.url else ""
-        where = f"WHERE {' AND '.join([tag, url])}" if any([tag, url]) else ""
+        where = f"WHERE {' AND '.join([item for item in [tag, url] if item])}" if any([tag, url]) else ""
         sql = f"""SELECT
             word1 || ' ' || word2 || ' ' || word3 as p
             FROM phrase {where} ORDER BY p"""
