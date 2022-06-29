@@ -20,6 +20,8 @@ class Cache:
         :return: строка с контентом (пустая в случае игнора кэша)
         """
         cache_file = self._url2file(url)
+        if cache_file.is_dir():
+            cache_file = cache_file / 'index.html'
         if cache_file.exists():
             logging.debug("Cache hit for url %s %s", url, cache_file)
             if ignore_cached:
@@ -29,8 +31,18 @@ class Cache:
         if not cache_file.parent.exists():
             cache_file.parent.mkdir(parents=True, exist_ok=True)
         resp = self._get(url)
+        if cache_file.parent.is_file():
+            self._make_directory_with_index(cache_file.parent)
         cache_file.write_text(resp)
         return resp
+
+    def _make_directory_with_index(self, parent):
+        """ Хак на случай записи вложенной страницы """
+        parent_name = str(parent)
+        parent.rename(parent_name + '.tmp')
+        tmp_parent = Path(parent_name + '.tmp')
+        Path(parent_name).mkdir()
+        tmp_parent.rename(parent / 'index.html')
 
     def _url2file(self, url: str):
         _url = urlparse(url)
@@ -75,6 +87,7 @@ def strip_utm_from_query_string(query_string: str) -> str:
     for key in list(q.keys()):
         if key.startswith('utm_'):
             del q[key]
+    q = {key: value.pop() if isinstance(value, list) and len(value) == 1 else value for key, value in q.items()}
     return urlencode(q)
 
 
