@@ -35,7 +35,7 @@ class BaseParser:
 class HTMLParser(BaseParser):
     tags = re.compile(r"<[^>]*>")
     non_cyrillic = re.compile(r'[A-Za-z0-9]+')
-    symbols = re.compile(r"[\"'.:,?{\}_\[/=\\()!@|;]")
+    symbols = re.compile(r"[\"'{\}_\[/=\\()@|]")
     spaces = re.compile(r"[ ]{2,}")
 
     def parse(self):

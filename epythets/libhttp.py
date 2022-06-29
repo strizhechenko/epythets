@@ -2,6 +2,7 @@
 import logging
 import re
 from pathlib import Path
+
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 cache = None
