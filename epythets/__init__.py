@@ -17,6 +17,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.description = "Вытянуть последние N записей из мастодон в свой SQLite для фразочек бота"
     parser.add_argument('--filename', type=str, help='Путь к текстовому файлу')
+    parser.add_argument('--plaintext', type=str, help='Строка текста для обработки')
     parser.add_argument('--url', type=str, help='Использовать вместо файла HTML со страницы')
     parser.add_argument('--mastodon', type=str, help='Использовать вместо файла публичный API инстанса мастодон')
     parser.add_argument('--rss', type=str, help='Использовать вместо файла заголовки и описания из RSS-фида')
@@ -52,6 +53,10 @@ def post_parse(args: argparse.Namespace):
         if args.url is None:
             args.url = url
         logging.debug("Hack: setting tag %s / url %s from filename %s", args.tag, args.url, args.filename)
+    elif args.plaintext:
+        tag = 'texts'
+        if args.tag is None:
+            args.tag = tag
     elif args.url or args.rss or args.mastodon:
         if args.tag is None:
             args.tag = tag_from_url(args)
@@ -100,6 +105,8 @@ def _main(args):
     elif args.filename:
         epythet.url = args.url
         epythet.process_file(args.filename)
+    elif args.plaintext:
+        epythet.process(args.plaintext)
     if args.dump:
         for phrase in epythet.dump():
             print(*phrase)
