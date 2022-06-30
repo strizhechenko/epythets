@@ -1,5 +1,4 @@
 """ Словарь шаблонов словосочетаний """
-patterns = dict()
 
 adjf_noun_noun = [
     {
@@ -38,6 +37,30 @@ noun_adjf_noun = [
     },
     {}
 ]
+adjf_adjf_noun = [
+    {
+        'TAG': {
+            'OR': ['ADJF', 'PRTF'],
+        },
+        'COMMON': {
+            'WITH': 1,
+            'TAG': {
+                'AND': [
+                    'nomn',
+                    {'OR': ['ADJF', 'PRTF']}
+                ]
+            }
+        },
+        'NOT': 'IGNORED',
+    },
+    {
+        'NOT': 'IGNORED'
+    },
+    {
+        'TAG': ['NOUN', 'nomn']
+    }
+]
+
 adjf_noun = [
     {
         'TAG': {'OR': ['PRTF', 'ADJF']},
@@ -50,7 +73,14 @@ adjf_noun = [
     {'TAG': 'NOUN'}
 ]
 
-for pattern in adjf_noun_noun, noun_adjf_noun, adjf_noun:
-    if len(pattern) not in patterns:
-        patterns[len(pattern)] = []
-    patterns[len(pattern)].append(pattern)
+
+def load_patterns() -> dict:
+    _p = dict()
+    for pattern in [adjf_adjf_noun, adjf_noun_noun, noun_adjf_noun, adjf_noun]:
+        if len(pattern) not in _p:
+            _p[len(pattern)] = []
+        _p[len(pattern)].append(pattern)
+    return _p
+
+
+patterns = load_patterns()

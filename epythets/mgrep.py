@@ -100,6 +100,8 @@ def tag_match(parsed, tags, deep=0):
             elif key == 'ALL':
                 return all(tag_match(parsed, tag, deep + 1) for tag in value)
             return NotImplementedError("Не поддерживается оператор", key)
+    if isinstance(tags, list):  # считаем что список тегов - это короткая запись AND
+        return all(tag_match(parsed, tag, deep + 1) for tag in tags)
     raise NotImplementedError("Не поддерживается тип тэга", type(tags))
 
 
@@ -200,6 +202,9 @@ def main():
             for _line in fd:  # sys.stdin
                 for _i in pick_combos(_line, match_phrase, 3):
                     s3.add(tuple(_i))
+    # _line = "Прикормленный Исполнитель Госзакзаа"
+    # for _i in pick_combos(_line, match_phrase, 3):
+    #     s3.add(tuple(_i))
     for i in sorted(s3):
         logging.info("Гарри Поттер и %s %s %s", *i)
 
